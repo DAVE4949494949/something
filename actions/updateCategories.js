@@ -51,11 +51,41 @@ var Action = {
       },
       Action._getTasks,
       Action._uploadCategories,
-      function(cb) {
-        console.log(Action._getData('categories'));
-        next();
+      Action._parseCaterogies
+    ],
+      function(err) {
+        async.waterfall(
+          [
+            function (fn) {
+              Action._api.log('Remove current task', 'notice');
+              Action._removeTask(Action._taskId, fn);
+            }
+          ],
+          function (dberr) {
+            if (err || dberr) {
+              connection.response.error = err ? err.toString() : dberr;
+            }
+
+            if (connection.type == 'websocket') {
+              connection.response = {
+                redirect: '/website/' + Action._getData('url'),
+                error: connection.response.error
+              };
+            } else {
+              connection.response = {
+                success: Action._getData(),
+                error: connection.response.error
+              };
+            }
+
+            if (connection.type == 'socket' || connection.type == 'websocket') {
+              connection.sendMessage(connection.response);
+            }
+
+            return next(connection, true);
+          });
       }
-    ]);
+    );
   },
 
   // initialization proxy collection
@@ -96,12 +126,17 @@ var Action = {
     });
   },
 
+  // Remove task from DB
+  _removeTask: function(taskId, cb) {
+    Action._db.query('DELETE FROM `analiztask` WHERE `id` = ' + taskId, cb);
+  },
+
   // Upload Cateegories of item
   _uploadCategories: function(cb) {
     async.eachSeries(Action._proxyList, function (proxy, fn) {
       parser.getCategories(Action._getData('url'), proxy, function (err, cats) {
         if (err) {
-          api.log('getCategories error', 'error', err);
+          Action._api.log('getCategories error', 'error', err);
           return fn(null);
         }
         Action._setData('categories', cats || []);
@@ -117,11 +152,38 @@ var Action = {
     });
   },
 
-  // Получение категорий
+  // Parsing categories
   _parseCaterogies: function(cb) {
+    async.waterfall([
+      function(cb2) {
+        Action._api.log('Start parsing categories', 'notice', Action._getData('url'));
+        Action._getSiteInfoByUrl(Action._getData('url'), function(err, rows) {
+          if (err) {
+            return cb2(err);
+          }
 
-    debug && api.log('cats:', 'notice', data.categories);
+          // If row doesn't exist
+          if (!rows[0] || !rows[0].id) {
+            return cb2(new Error('Site doesnt exist'));
+          }
 
+          var
+            data = Action._getData(),
+            site = rows[0];
+
+          // Merging new data to base object
+          site = _.extend(site, data);
+          // Updating site info
+          Action._api.log('Start updating site info', 'notice');
+          Action._updateAnalysis(site, cb2);
+        });
+      },
+      function(siteId, cb2) {
+        // Upsert cagegories
+        Action._api.log('Start inserting categories', 'notice');
+        Action.updateSiteCategories(siteId, Action._getData('categories'), cb2);
+      }
+    ], cb);
   },
 
   _setData: function(name, value, _default) {
@@ -129,8 +191,69 @@ var Action = {
   },
 
   _getData: function(name) {
+    if (!name) {
+      return Action._data;
+    }
     return Action._data[name];
+  },
+
+  _clearData: function() {
+    delete Action._data;
+    Action._data = {};
+  },
+
+  _getSiteInfoByUrl: function(url, cb) {
+    Action._db.query('SELECT * FROM `analiz` WHERE `site` LIKE ' + Action._db.escape(url) + '', cb);
+  },
+
+  // Updating analyz row
+  _updateAnalysis: function(data, cb) {
+    Action._db.query('UPDATE `analiz` ' +
+      'SET `title` = ' + Action._db.escape(data.title) + ', ' +
+      '`site` = ' + Action._db.escape(data.url) + ', ' +
+      '`base_analiz` = ' + Action._db.escape(JSON.stringify(data)) + ', ' +
+      '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
+      '`keywords` = ' + Action._db.escape(data.keywords) + ' ' +
+      'WHERE `id` = ' + data.id,
+      function (err, res) {
+        cb(err, data.id);
+      }
+    );
+  },
+
+  getOrInsertCategory: function(categoryName, cb) {
+    Action._db.query('SELECT `id` FROM `category` WHERE `name` LIKE ' + Action._db.escape(categoryName) + '', function(err, rows) {
+      if (err) return cb(err);
+      if (!rows[0]) {
+        Action._db.query('INSERT INTO `category` SET `name` = ' + Action._db.escape(categoryName) + '', function (err, res) {
+          cb(err, res.insertId);
+        });
+      } else {
+        cb(err, rows[0].id);
+      }
+    });
+  },
+
+  // Updating category's dependencies
+  updateSiteCategories: function(siteId, categories, cb) {
+    Action._db.query('DELETE FROM `analiz_category` WHERE `analiz_id` = ' + Action._db.escape(siteId), function (err) {
+      if (err) {
+        return cb(err);
+      }
+      // Upsert categories
+      async.each(categories || [], function (categoryName, done) {
+        Action.getOrInsertCategory(categoryName, function (err, categoryId) {
+          if (err) {
+            return done(err);
+          }
+          Action._db.query('INSERT INTO `analiz_category` SET `category_id` = ' + categoryId + ', `analiz_id` = ' + siteId, done);
+        });
+      }, function (err) {
+        cb(err);
+      });
+    });
   }
+
 };
 
 
@@ -148,13 +271,7 @@ exports.action = {
   },
 
   run: function(api, connection, next) {
-    api.log('Start updating categories', 'notice');
-    Action.updateCategories(api, connection, function(err, data) {
-      if (err) {
-        api.log('Error parsing categories', 'crit');
-        throw err;
-      }
-      next(connection, true);
-    });
+    api.log('-- Start Task for Updating Categories --', 'notice');
+    Action.updateCategories(api, connection, next);
   }
 };
