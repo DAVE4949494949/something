@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<!-- saved from url=(0038)http://botalizer.com/update/google.com -->
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Website Analysis | Botalizer</title>
+  <link rel="shortcut icon" href="http://botalizer.com/favicon.ico">
+  <script type="text/javascript"
+          src="./Website Analysis   Botalizer_files/actionheroClient.js"></script>
+  <script type="text/javascript"
+          src="./Website Analysis   Botalizer_files/progressbar.js"></script>
+  <link rel="stylesheet" href="http://botalizer.com/media/css/progressbar.css">
+  <style type="text/css">
+
+    body {
+      margin: 0;
+    }
+
+    #check-progressbar-container {
+
+      position: relative;
+      width: 300px; /* check-progressbar width */
+      padding: 20px 5px 20px 5px; /* Space for progresbar-texts */
+      background-color: transparent;
+
+    }
+
+    .progressbar-text {
+
+      position: absolute;
+      font-family: Arial;
+      font-size: 10px;
+      color: #333333;
+
+    }
+
+    .progressbar-text.top-right {
+
+      top: 5px;
+      right: 7px;
+
+    }
+
+    .progressbar-text.top-left {
+
+      top: 5px;
+      left: 7px;
+
+    }
+
+    .progressbar-text.bottom-right {
+
+      bottom: 5px;
+      right: 7px;
+
+    }
+
+    .progressbar-text.bottom-left {
+
+      bottom: 5px;
+      left: 7px;
+
+    }
+
+
+  </style>
+  <script type="text/javascript">
+
+    if (!options)
+      var options = {};
+    var client;
+
+    var progressBar;
+
+    window.onload = function() {
+
+      client = new actionheroClient;
+
+      client.on('message', function(message) {
+        if (message.error)
+          return showError(message.error.toString());
+        if ('redirect' in message) {
+          if (window.parent)
+            window.parent.location = message.redirect;
+          else
+            window.location = message.redirect;
+        }
+        if ('increment' in message)
+          incrementProgressBar(message.increment, message.total);
+        return true;
+      });
+
+      client.connect(function(err, details) {
+        if (err)
+          console.log(err);
+        client.actionWebSocket({action: 'check', id: 783929},
+          function(message) {
+          });
+      });
+
+      progressBar = new ProgressBar("check-progressbar",
+        {'width': '300px', 'height': '6px'});
+
+      var progressBarItem = {};
+      progressBarItem[ProgressBar.OPTION_NAME.ITEM_ID] = "success";
+      progressBarItem[ProgressBar.OPTION_NAME.COLOR_ID] =
+        ProgressBar.OPTION_VALUE.COLOR_ID.GREEN;
+      progressBar.createItem(progressBarItem);
+
+      progressBar.getElement().addEventListener(ProgressBar.EVENT.CHANGED,
+        function($event) {
+          document
+            .getElementById('check-progressbar-text3')
+            .innerHTML =
+            '<strong>' + $event.detail.me.getExValue($event.detail.itemID)
+            + '/' + $event.detail.me.getMaxValue() + '</strong> Checked';
+        });
+      progressBar.setMaxValue(27);
+    };
+
+    function incrementProgressBar(increment, total) {
+      if (!progressBar) {
+        return false;
+      }
+      progressBar.setMaxValue(total);
+
+      var newValue = progressBar.getExValue('success') + increment;
+
+      progressBar.setPercent(
+        progressBar.getPercentByValue(newValue, 'success'),
+        'success'
+      );
+    }
+
+    function showError(message) {
+      alert(message);
+      if (window.parent) {
+        window.parent.location.reload();
+      } else {
+        window.location.reload();
+      }
+    }
+  </script>
+</head>
+<body>
+<div id="check-progressbar-container">
+
+  <div id="check-progressbar-text1" class="progressbar-text top-left">Site
+    checked...
+  </div>
+  <div id="check-progressbar-text2" class="progressbar-text top-right"></div>
+
+  <div id="check-progressbar" class="progressbar-control"
+       style="width: 300px; height: 6px;">
+    <div class="item-bar green"
+         style="opacity: 1; float: left; position: relative; width: 88%;"></div>
+  </div>
+
+  <div id="check-progressbar-text3" class="progressbar-text bottom-left">
+    <strong>22/25</strong> Checked
+  </div>
+
+</div>
+</body>
+</html>
