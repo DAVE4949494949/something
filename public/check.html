@@ -6,9 +6,9 @@
   <title>Website Analysis | Botalizer</title>
   <link rel="shortcut icon" href="http://botalizer.com/favicon.ico">
   <script type="text/javascript"
-          src="./Website Analysis   Botalizer_files/actionheroClient.js"></script>
+          src="public/javascript/actionheroClient.js"></script>
   <script type="text/javascript"
-          src="./Website Analysis   Botalizer_files/progressbar.js"></script>
+          src="public/javascript/progressbar.js"></script>
   <link rel="stylesheet" href="http://botalizer.com/media/css/progressbar.css">
   <style type="text/css">
 
@@ -66,15 +66,13 @@
   </style>
   <script type="text/javascript">
 
-    if (!options)
-      var options = {};
-    var client;
-
-    var progressBar;
+    var
+      options = options || {},
+      client, progressBar;
 
     window.onload = function() {
 
-      client = new actionheroClient;
+      client = new actionheroClient();
 
       client.on('message', function(message) {
         if (message.error)
@@ -93,18 +91,23 @@
       client.connect(function(err, details) {
         if (err)
           console.log(err);
-        client.actionWebSocket({action: 'check', id: 783929},
-          function(message) {
-          });
+
+        client.actionWebSocket(
+          { action: 'check', id: 783929 },
+          function(message) {}
+        );
       });
 
-      progressBar = new ProgressBar("check-progressbar",
-        {'width': '300px', 'height': '6px'});
+      progressBar = new ProgressBar(
+        "check-progressbar",
+        { 'width': '300px', 'height': '6px' }
+      );
 
       var progressBarItem = {};
       progressBarItem[ProgressBar.OPTION_NAME.ITEM_ID] = "success";
       progressBarItem[ProgressBar.OPTION_NAME.COLOR_ID] =
         ProgressBar.OPTION_VALUE.COLOR_ID.GREEN;
+
       progressBar.createItem(progressBarItem);
 
       progressBar.getElement().addEventListener(ProgressBar.EVENT.CHANGED,
@@ -150,10 +153,9 @@
   </div>
   <div id="check-progressbar-text2" class="progressbar-text top-right"></div>
 
-  <div id="check-progressbar" class="progressbar-control"
-       style="width: 300px; height: 6px;">
-    <div class="item-bar green"
-         style="opacity: 1; float: left; position: relative; width: 88%;"></div>
+  <div id="check-progressbar" class="progressbar-control" style="width: 300px; height: 6px;">
+    <div class="item-bar green" style="opacity: 1; float: left; position:
+     relative; width: 88%;"></div>
   </div>
 
   <div id="check-progressbar-text3" class="progressbar-text bottom-left">
