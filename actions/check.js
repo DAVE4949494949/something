@@ -44,14 +44,6 @@ var action          = {},
 /////////////////////////////////////////////////////////////////////
 // metadata
 
-var db = mysql.createConnection({
-  host: 'localhost',
-  user: 'seo',
-  password: 'passdemo',
-  database: 'seo49'
-});
-
-db.connect();
 
 action.name = 'check';
 action.description = 'check site';
@@ -71,6 +63,10 @@ action.run = function (api, connection, next) {
       messageCount = 0;
   var proxyList = _.shuffle(api.proxyList || []);
   var stopped = false;
+
+  var db = mysql.createConnection(api.config.mysql);
+
+  db.connect();
 
   async.waterfall([
 
@@ -903,6 +899,7 @@ action.run = function (api, connection, next) {
         });
     }
   );
+
   var registerParsers = {};
 
   function registerParser(name) {
@@ -931,6 +928,7 @@ action.run = function (api, connection, next) {
       }
     }, 5000);
   }
+
   function successPart(err, name) {
     successParsers++;
     if (debug && name) {
@@ -955,89 +953,90 @@ action.run = function (api, connection, next) {
     });
     return true;
   }
-}
-;
+
+  function saveRecord(data, fn) {
+    async.waterfall([
+      function (cb) {
+        db.query('SELECT `id` FROM `analiz` WHERE `site` LIKE ' + db.escape(data.url) + '', function (err, rows) {
+          if (err) return cb(err);
+          if (rows[0] && rows[0].id) {
+            db.query('UPDATE `analiz` ' +
+              'SET `title` = ' + db.escape(data.title) + ', ' +
+              '`site` = ' + db.escape(data.url) + ', ' +
+              '`base_analiz` = ' + db.escape(JSON.stringify(data)) + ', ' +
+              '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
+              '`keywords` = ' + db.escape(data.keywords) + ' ' +
+              'WHERE `id` = ' + rows[0].id,
+              function (err, res) {
+                cb(err, rows[0].id);
+              }
+            );
+
+          } else {
+
+            db.query('INSERT INTO `analiz` ' +
+              'SET `title` = ' + db.escape(data.title) + ', ' +
+              '`site` = ' + db.escape(data.url) + ', ' +
+              '`base_analiz` = ' + db.escape(JSON.stringify(data)) + ', ' +
+              '`create_date` = UNIX_TIMESTAMP(), ' +
+              '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
+              '`keywords` = ' + db.escape(data.keywords) + ' ' +
+              '',
+              function (err, res) {
+                cb(err, !err ? res.insertId : null);
+              }
+            );
+          }
+        });
+      }, function (analizId, cb) {
+
+        db.query('DELETE FROM `analiz_category` WHERE `analiz_id` = ' + db.escape(analizId), function (err, res) {
+          if (err) return cb(err);
+          async.each(data.categories || [], function (category, done) {
+            getCategoyId(category, function (err, categoryId) {
+              if (err) return done(err);
+              db.query('INSERT INTO `analiz_category` SET `category_id` = ' + categoryId + ', `analiz_id` = ' + analizId, done);
+            });
+          }, function (err) {
+            cb(err);
+            // todo! удалить задачу
+          });
+        });
+      }
+    ], function (err) {
+      fn(err);
+    });
+  }
+
+  function getCategoyId(category, cb) {
+    db.query('SELECT `id` FROM `category` WHERE `name` LIKE ' + db.escape(category) + '', function (err, rows) {
+      if (err) return cb(err);
+      if (!rows[0]) {
+        db.query('INSERT INTO `category` SET `name` = ' + db.escape(category) + '', function (err, res) {
+          cb(err, res.insertId);
+        });
+      } else {
+        cb(err, rows[0].id);
+      }
+    });
+  }
+
+  function download(url, dest, cb) {
+    var file = fs.createWriteStream(dest);
+    http.get(url, function (response) {
+      response.pipe(file);
+      file.on('finish', function () {
+        file.close(cb);
+      });
+    }).on('error', function (err) {
+      fs.unlink(dest);
+      if (cb)
+        cb(err);
+    });
+  }
+};
 
 exports.action = action;
 
-function download(url, dest, cb) {
-  var file = fs.createWriteStream(dest);
-  http.get(url, function (response) {
-    response.pipe(file);
-    file.on('finish', function () {
-      file.close(cb);
-    });
-  }).on('error', function (err) {
-    fs.unlink(dest);
-    if (cb)
-      cb(err);
-  });
-}
 
-function saveRecord(data, fn) {
 
-  async.waterfall([
-    function (cb) {
-      db.query('SELECT `id` FROM `analiz` WHERE `site` LIKE ' + db.escape(data.url) + '', function (err, rows) {
-        if (err) return cb(err);
-        if (rows[0] && rows[0].id) {
-          db.query('UPDATE `analiz` ' +
-            'SET `title` = ' + db.escape(data.title) + ', ' +
-            '`site` = ' + db.escape(data.url) + ', ' +
-            '`base_analiz` = ' + db.escape(JSON.stringify(data)) + ', ' +
-            '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
-            '`keywords` = ' + db.escape(data.keywords) + ' ' +
-            'WHERE `id` = ' + rows[0].id,
-            function (err, res) {
-              cb(err, rows[0].id);
-            }
-          );
-
-        } else {
-
-          db.query('INSERT INTO `analiz` ' +
-            'SET `title` = ' + db.escape(data.title) + ', ' +
-            '`site` = ' + db.escape(data.url) + ', ' +
-            '`base_analiz` = ' + db.escape(JSON.stringify(data)) + ', ' +
-            '`create_date` = UNIX_TIMESTAMP(), ' +
-            '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
-            '`keywords` = ' + db.escape(data.keywords) + ' ' +
-            '',
-            function (err, res) {
-              cb(err, !err ? res.insertId : null);
-            }
-          );
-        }
-      });
-    }, function (analizId, cb) {
-
-      db.query('DELETE FROM `analiz_category` WHERE `analiz_id` = ' + db.escape(analizId), function (err, res) {
-        if (err) return cb(err);
-        async.each(data.categories || [], function (category, done) {
-          getCategoyId(category, function (err, categoryId) {
-            if (err) return done(err);
-            db.query('INSERT INTO `analiz_category` SET `category_id` = ' + categoryId + ', `analiz_id` = ' + analizId, done);
-          });
-        }, function (err) {
-          cb(err);
-          // todo! удалить задачу
-        });
-      });
-    }
-  ], function (err) {
-    fn(err);
-  });
-}
-
-function getCategoyId(category, cb) {
-  db.query('SELECT `id` FROM `category` WHERE `name` LIKE ' + db.escape(category) + '', function (err, rows) {
-    if (err) return cb(err);
-    if (!rows[0]) {
-      db.query('INSERT INTO `category` SET `name` = ' + db.escape(category) + '', function (err, res) {
-        cb(err, res.insertId);
-      });
-    } else {
-      cb(err, rows[0].id);
-    }
-  });
-}
