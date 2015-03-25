@@ -165,7 +165,7 @@ var websocket = function(api, options, next) {
     } else {
       return (libSource + '\r\n\r\n\r\n' + ahClientSource);
     }
-  }
+  };
 
   server.writeClientJS = function() {
     if (api.config.servers.websocket.clientJsPath != null &&
