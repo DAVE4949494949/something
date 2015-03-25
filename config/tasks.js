@@ -13,7 +13,7 @@ exports.default = {
       redis: api.config.redis
     }
   }
-}
+};
 
 exports.test = {
   tasks: function(api){
@@ -24,4 +24,4 @@ exports.test = {
       redis: api.config.redis
     }  
   }
-}
+};

@@ -1,13 +1,17 @@
 exports.production = {
-  host: 'localhost',
-  user: 'seo',
-  password: 'passdemo',
-  database: 'seo49'
+  mysql: {
+    host: 'localhost',
+    user: 'seo',
+    password: 'passdemo',
+    database: 'seo49'
+  }
 };
 
 exports.test = {
-  host: 'localhost',
-  user: 'root',
-  password: 'root',
-  database: 'parser'
+  mysql: {
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'parser'
+  }
 };

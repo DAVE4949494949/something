@@ -116,8 +116,7 @@ exports.default = {
 
       connectionRoomRequired: function(room){
         return 'a room is required';
-      },
-
+      }
     }
   }
-}
+};

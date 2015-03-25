@@ -50,20 +50,7 @@ exports.default = {
   }
 };
 
-exports.test = { 
-  general: function(api){
-    return {
-      id: 'test-server',
-      developmentMode: true,
-      startingChatRooms: {
-        'defaultRoom': {},
-        'otherRoom': {},
-        'secureRoom': {authorized: true}
-      }
-//      developmentMode: true
-    }
-  }
-};
+exports.test = exports.default;
 
 exports.production = { 
   general: function(api){

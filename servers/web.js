@@ -13,7 +13,7 @@ var web = function(api, options, next){
   // INIT //
   //////////
 
-  var type = 'web'
+  var type = 'web';
   var attributes = {
     canChat: false,
     logConnections: false,
@@ -22,7 +22,7 @@ var web = function(api, options, next){
     verbs: [
       // no verbs for connections of this type, as they are to be very short-lived
     ]
-  }
+  };
 
   var server = new api.genericServer(type, options, attributes);
 
@@ -54,14 +54,14 @@ var web = function(api, options, next){
       });
     }
 
-    var bootAttempts = 0
+    var bootAttempts = 0;
     server.server.on('error', function(e){
       bootAttempts++;
       if(bootAttempts < 5){
         server.log('cannot boot web server; trying again [' + String(e) + ']', 'error');
         if(bootAttempts === 1){ cleanSocket(options.bindIP, options.port); }
         setTimeout(function(){
-          server.log('attempting to boot again..')
+          server.log('attempting to boot again..');
           server.server.listen(options.port, options.bindIP);
         }, 1000)
       }else{
@@ -75,14 +75,14 @@ var web = function(api, options, next){
       chmodSocket(options.bindIP, options.port);
       next(server);
     });
-  }
+  };
 
   server._stop = function(next){
     server.server.close();
     process.nextTick(function(){
       next();
     });
-  }
+  };
 
   server.sendMessage = function(connection, message){
     var stringResponse = '';
@@ -96,7 +96,7 @@ var web = function(api, options, next){
     connection.rawConnection.res.writeHead(responseHttpCode, headers);
     connection.rawConnection.res.end(stringResponse);
     connection.destroy();
-  }
+  };
 
   server.sendFile = function(connection, error, fileStream, mime, length){
     connection.rawConnection.responseHeaders.push(['Content-Type', mime]);
@@ -122,7 +122,7 @@ var web = function(api, options, next){
 
   server.goodbye = function(connection){
     // disconnect handlers
-  }
+  };
 
   ////////////
   // EVENTS //
@@ -390,7 +390,7 @@ var web = function(api, options, next){
       callback(requestMode);
     }
 
-  }
+  };
 
   var fillParamsFromWebRequest = function(connection, varsHash){
     // helper for JSON posts
@@ -403,8 +403,8 @@ var web = function(api, options, next){
 
     for(var v in varsHash){
       connection.params[v] = varsHash[v];
-    };
-  }
+    }
+  };
 
   var buildRequesterInformation = function(connection){
     var requesterInformation = {
@@ -421,7 +421,7 @@ var web = function(api, options, next){
     }
 
     return requesterInformation;
-  }
+  };
 
   var cleanHeaders = function(connection){
     var originalHeaders = connection.rawConnection.responseHeaders.reverse();
@@ -440,7 +440,7 @@ var web = function(api, options, next){
       }
     }
     connection.rawConnection.responseHeaders = cleanedHeaders;
-  }
+  };
 
   var cleanSocket = function(bindIP, port){
     if(bindIP == null && port.indexOf("/") >= 0){ 
@@ -452,16 +452,16 @@ var web = function(api, options, next){
         }
       });
     } 
-  }
+  };
 
   var chmodSocket = function(bindIP, port){
     if(options.bindIP == null && options.port.indexOf("/") >= 0){ 
       fs.chmodSync(port, 0777); 
     } 
-  }
+  };
 
   next(server);
-}
+};
 
 /////////////////////////////////////////////////////////////////////
 // exports
