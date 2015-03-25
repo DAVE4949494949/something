@@ -8,6 +8,7 @@ exports.updateProxy = {
     pluginOptions: {},
 
     run: function (api, params, next) {
+
         if(!api.proxyList)
             api.proxyList = [];
         request.get({

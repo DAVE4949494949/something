@@ -93,7 +93,7 @@
           console.log(err);
 
         client.actionWebSocket(
-          { action: 'updateCategories', id: 783929 },
+          { action: 'updateCategories', id: 13 },
           function(message) {}
         );
       });
@@ -118,7 +118,7 @@
             '<strong>' + $event.detail.me.getExValue($event.detail.itemID)
             + '/' + $event.detail.me.getMaxValue() + '</strong> Checked';
         });
-      progressBar.setMaxValue(27);
+      progressBar.setMaxValue(1);
     };
 
     function incrementProgressBar(increment, total) {
