@@ -1,6 +1,6 @@
 exports.default = {
   servers: {
-    web: function(api){
+    web: function(api) {
       return {
         enabled: true,
         // HTTP or HTTPS?
@@ -13,30 +13,30 @@ exports.default = {
         // Set to `null` when listening to socket
         bindIP: '127.0.0.1',
         // Any additional headers you want actionhero to respond with
-        httpHeaders : {
-          'X-Powered-By'                : api.config.general.serverName,
-          'Access-Control-Allow-Origin' : '*',
+        httpHeaders: {
+          'X-Powered-By': api.config.general.serverName,
+          'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'HEAD, GET, POST, PUT, PATCH, DELETE, OPTIONS, TRACE',
           'Access-Control-Allow-Headers': 'Content-Type'
         },
         // Route that actions will be served from; secondary route against this route will be treated as actions,
         //  IE: /api/?action=test == /api/test/
-        urlPathForActions : 'api',
+        urlPathForActions: 'api',
         // Route that static files will be served from;
         //  path (relative to your project root) to serve static content from
         //  set to `null` to disable the file server entirely 
-        urlPathForFiles : 'public',
+        urlPathForFiles: 'public',
         // When visiting the root URL, should visitors see 'api' or 'file'?
         //  Visitors can always visit /api and /public as normal
-        rootEndpointType : 'file',
+        rootEndpointType: 'file',
         // simple routing also adds an 'all' route which matches /api/:action for all actions
-        simpleRouting : true,
+        simpleRouting: true,
         // queryRouting allows an action to be defined via a URL param, ie: /api?action=:action
-        queryRouting : true,
+        queryRouting: true,
         // The header which will be returned for all flat file served from /public; defined in seconds
-        flatFileCacheDuration : 60,
+        flatFileCacheDuration: 60,
         // Settings for determining the id of an http(s) request (browser-fingerprint)
-        fingerprintOptions : {
+        fingerprintOptions: {
           cookieKey: 'sessionID',
           toSetCookie: true,
           onlyStaticElements: false,
@@ -65,9 +65,9 @@ exports.default = {
   }
 };
 
-exports.production = { 
+exports.production = {
   servers: {
-    web: function(api){
+    web: function(api) {
       return {
         padding: null,
         metadataOptions: {
@@ -80,8 +80,8 @@ exports.production = {
 };
 
 exports.test = {
-  servers: { 
-    web: function(api){
+  servers: {
+    web: function(api) {
       return {
         secure: false,
         port: 18080,

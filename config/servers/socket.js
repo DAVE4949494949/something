@@ -1,6 +1,6 @@
 exports.default = {
   servers: {
-    socket: function(api){
+    socket: function(api) {
       return {
         enabled: true,
         // TCP or TLS?
@@ -20,7 +20,7 @@ exports.default = {
 
 exports.test = {
   servers: {
-    socket: function(api){
+    socket: function(api) {
       return {
         enabled: true,
         port: 5001,
