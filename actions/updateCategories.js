@@ -170,7 +170,14 @@ var Action = {
           var
             data = Action._getData(),
             site = rows[0];
-          site.base_analiz = JSON.parse(site.base_analiz);
+
+          try {
+            site.base_analiz = JSON.parse(site.base_analiz);
+          } catch (e) {
+            site.base_analiz = {};
+          }
+          site.base_analiz.categories = data.categories;
+
           // Merging new data to base object
           site = _.extend(site, data);
           console.log(site);
@@ -210,11 +217,9 @@ var Action = {
   // Updating analyz row
   _updateAnalysis: function(data, cb) {
     Action._db.query('UPDATE `analiz` ' +
-      'SET `title` = ' + Action._db.escape(data.title) + ', ' +
-      '`site` = ' + Action._db.escape(data.url) + ', ' +
-      '`base_analiz` = ' + Action._db.escape(JSON.stringify(data)) + ', ' +
-      '`update_date` = UNIX_TIMESTAMP() + 86400, ' +
-      '`keywords` = ' + Action._db.escape(data.keywords) + ' ' +
+      'SET ' +
+      '`base_analiz` = ' + Action._db.escape(JSON.stringify(data.base_analiz)) + ', ' +
+      '`update_date` = UNIX_TIMESTAMP() + 86400 ' +
       'WHERE `id` = ' + data.id,
       function (err, res) {
         cb(err, data.id);
