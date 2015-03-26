@@ -177,10 +177,11 @@ var Action = {
             site.base_analiz = {};
           }
           site.base_analiz.categories = data.categories;
+          site.base_analiz.category = data.categories.join(', ');
 
           // Merging new data to base object
           site = _.extend(site, data);
-          console.log(site);
+
           // Updating site info
           Action._api.log('Start updating site info', 'notice');
           Action._updateAnalysis(site, cb2);
