@@ -3,7 +3,7 @@ var UglifyJS = require('../node_modules/actionhero/node_modules/uglify-js');
 var fs = require('fs');
 var path = require('path');
 var util = require('util');
-var browser_fingerprint = require('../node_modules/actionhero/node_modules/browser_fingerprint');
+var browser_fingerprint = require('browser_fingerprint');
 
 var websocket = function(api, options, next) {
 
