@@ -170,9 +170,10 @@ var Action = {
           var
             data = Action._getData(),
             site = rows[0];
-
+          site.base_analiz = JSON.parse(site.base_analiz);
           // Merging new data to base object
           site = _.extend(site, data);
+          console.log(site);
           // Updating site info
           Action._api.log('Start updating site info', 'notice');
           Action._updateAnalysis(site, cb2);
