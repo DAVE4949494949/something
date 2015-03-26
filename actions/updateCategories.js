@@ -156,7 +156,7 @@ var Action = {
   _parseCaterogies: function(cb) {
     async.waterfall([
       function(cb2) {
-        Action._api.log('Start parsing categories', 'notice', Action._getData('url'));
+        Action._api.log('Start parsing categories', 'notice', Action._getData('url'), Action._getData('categories'));
         Action._getSiteInfoByUrl(Action._getData('url'), function(err, rows) {
           if (err) {
             return cb2(err);
