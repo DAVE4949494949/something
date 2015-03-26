@@ -1,4 +1,4 @@
-exports.production = {
+exports.default = {
   mysql: {
     host: 'localhost',
     user: 'seo',
