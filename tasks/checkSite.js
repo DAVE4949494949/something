@@ -10,7 +10,7 @@ exports.getCategories = {
     run: function (api, params, next) {
         /**
          *
-         $content = @Url::file_get_contents_new('http://getinfo.botalizer.com/parsers/category.php?s=' . $url);
+         $content = @Url::file_get_contents_new('http://getinfo.botalysis.com/parsers/category.php?s=' . $url);
          preg_match_all('/>(.*)</', $content, $category);
          return $category[1];
          */

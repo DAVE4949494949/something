@@ -10,7 +10,7 @@ exports.default = {
       logger.transports.push(function(api, winston){
         return new (winston.transports.Console)({
           colorize: true,
-          level: 'notice',
+          level: 'debug',
           timestamp: api.utils.sqlDateTime
         });
       });
@@ -34,10 +34,10 @@ exports.default = {
   }
 }
 
-//exports.test = {
-//  logger: function(api){
-//    return {
-//      transports: null
-//    }
-//  }
-//}
+exports.test = { 
+  logger: function(api){
+    return {
+      transports: null
+    }
+  }
+}

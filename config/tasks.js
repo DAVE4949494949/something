@@ -2,7 +2,7 @@ exports.default = {
   tasks: function(api){
     return {
       // Should this node run a scheduler to promote delayed tasks?
-      scheduler: true,
+      scheduler: false,
       // what queues should the workers work and how many to spawn?
       //  ['*'] is one worker working the * queue
       //  ['high,low'] is one worker working 2 queues

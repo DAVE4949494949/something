@@ -1,19 +1,5 @@
-(function UMDish(name, context, definition) {  context[name] = definition.call(context);  if (typeof module !== "undefined" && module.exports) {    module.exports = context[name];  } else if (typeof define == "function" && define.amd) {    define(function reference() { return context[name]; });  }})("Primus", this, function Primus() {/*globals require, define */
+(function (name, context, definition) {  context[name] = definition.call(context);  if (typeof module !== "undefined" && module.exports) {    module.exports = context[name];  } else if (typeof define == "function" && define.amd) {    define(function reference() { return context[name]; });  }})("Primus", this, function PRIMUS() {/*globals require, define */
 'use strict';
-
-/**
- * Representation of a single EventEmitter function.
- *
- * @param {Function} fn Event handler to be called.
- * @param {Mixed} context Context for function execution.
- * @param {Boolean} once Only emit once
- * @api private
- */
-function EE(fn, context, once) {
-  this.fn = fn;
-  this.context = context;
-  this.once = once || false;
-}
 
 /**
  * Minimal EventEmitter interface that is molded against the Node.js
@@ -22,15 +8,9 @@ function EE(fn, context, once) {
  * @constructor
  * @api public
  */
-function EventEmitter() { /* Nothing to set */ }
-
-/**
- * Holds the assigned EventEmitters by name.
- *
- * @type {Object}
- * @private
- */
-EventEmitter.prototype._events = undefined;
+function EventEmitter() {
+  this._events = {};
+}
 
 /**
  * Return a list of assigned event listeners.
@@ -40,14 +20,7 @@ EventEmitter.prototype._events = undefined;
  * @api public
  */
 EventEmitter.prototype.listeners = function listeners(event) {
-  if (!this._events || !this._events[event]) return [];
-  if (this._events[event].fn) return [this._events[event].fn];
-
-  for (var i = 0, l = this._events[event].length, ee = new Array(l); i < l; i++) {
-    ee[i] = this._events[event][i].fn;
-  }
-
-  return ee;
+  return Array.apply(this, this._events[event] || []);
 };
 
 /**
@@ -61,45 +34,50 @@ EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
   if (!this._events || !this._events[event]) return false;
 
   var listeners = this._events[event]
+    , length = listeners.length
     , len = arguments.length
+    , fn = listeners[0]
     , args
     , i;
 
-  if ('function' === typeof listeners.fn) {
-    if (listeners.once) this.removeListener(event, listeners.fn, true);
+  if (1 === length) {
+    if (fn.__EE3_once) this.removeListener(event, fn);
 
     switch (len) {
-      case 1: return listeners.fn.call(listeners.context), true;
-      case 2: return listeners.fn.call(listeners.context, a1), true;
-      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
-      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
-      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
-      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
-    }
+      case 1:
+        fn.call(fn.__EE3_context || this);
+      break;
+      case 2:
+        fn.call(fn.__EE3_context || this, a1);
+      break;
+      case 3:
+        fn.call(fn.__EE3_context || this, a1, a2);
+      break;
+      case 4:
+        fn.call(fn.__EE3_context || this, a1, a2, a3);
+      break;
+      case 5:
+        fn.call(fn.__EE3_context || this, a1, a2, a3, a4);
+      break;
+      case 6:
+        fn.call(fn.__EE3_context || this, a1, a2, a3, a4, a5);
+      break;
 
+      default:
+        for (i = 1, args = new Array(len -1); i < len; i++) {
+          args[i - 1] = arguments[i];
+        }
+
+        fn.apply(fn.__EE3_context || this, args);
+    }
+  } else {
     for (i = 1, args = new Array(len -1); i < len; i++) {
       args[i - 1] = arguments[i];
     }
 
-    listeners.fn.apply(listeners.context, args);
-  } else {
-    var length = listeners.length
-      , j;
-
-    for (i = 0; i < length; i++) {
-      if (listeners[i].once) this.removeListener(event, listeners[i].fn, true);
-
-      switch (len) {
-        case 1: listeners[i].fn.call(listeners[i].context); break;
-        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
-        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
-        default:
-          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
-            args[j - 1] = arguments[j];
-          }
-
-          listeners[i].fn.apply(listeners[i].context, args);
-      }
+    for (i = 0; i < length; fn = listeners[++i]) {
+      if (fn.__EE3_once) this.removeListener(event, fn);
+      fn.apply(fn.__EE3_context || this, args);
     }
   }
 
@@ -115,16 +93,11 @@ EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
  * @api public
  */
 EventEmitter.prototype.on = function on(event, fn, context) {
-  var listener = new EE(fn, context || this);
-
   if (!this._events) this._events = {};
-  if (!this._events[event]) this._events[event] = listener;
-  else {
-    if (!this._events[event].fn) this._events[event].push(listener);
-    else this._events[event] = [
-      this._events[event], listener
-    ];
-  }
+  if (!this._events[event]) this._events[event] = [];
+
+  fn.__EE3_context = context;
+  this._events[event].push(fn);
 
   return this;
 };
@@ -138,18 +111,8 @@ EventEmitter.prototype.on = function on(event, fn, context) {
  * @api public
  */
 EventEmitter.prototype.once = function once(event, fn, context) {
-  var listener = new EE(fn, context || this, true);
-
-  if (!this._events) this._events = {};
-  if (!this._events[event]) this._events[event] = listener;
-  else {
-    if (!this._events[event].fn) this._events[event].push(listener);
-    else this._events[event] = [
-      this._events[event], listener
-    ];
-  }
-
-  return this;
+  fn.__EE3_once = true;
+  return this.on(event, fn, context);
 };
 
 /**
@@ -157,34 +120,25 @@ EventEmitter.prototype.once = function once(event, fn, context) {
  *
  * @param {String} event The event we want to remove.
  * @param {Function} fn The listener that we need to find.
- * @param {Boolean} once Only remove once listeners.
  * @api public
  */
-EventEmitter.prototype.removeListener = function removeListener(event, fn, once) {
+EventEmitter.prototype.removeListener = function removeListener(event, fn) {
   if (!this._events || !this._events[event]) return this;
 
   var listeners = this._events[event]
     , events = [];
 
-  if (fn) {
-    if (listeners.fn && (listeners.fn !== fn || (once && !listeners.once))) {
-      events.push(listeners);
-    }
-    if (!listeners.fn) for (var i = 0, length = listeners.length; i < length; i++) {
-      if (listeners[i].fn !== fn || (once && !listeners[i].once)) {
-        events.push(listeners[i]);
-      }
+  for (var i = 0, length = listeners.length; i < length; i++) {
+    if (fn && listeners[i] !== fn) {
+      events.push(listeners[i]);
     }
   }
 
   //
   // Reset the array, or remove it completely if we have no more listeners.
   //
-  if (events.length) {
-    this._events[event] = events.length === 1 ? events[0] : events;
-  } else {
-    delete this._events[event];
-  }
+  if (events.length) this._events[event] = events;
+  else this._events[event] = null;
 
   return this;
 };
@@ -198,7 +152,7 @@ EventEmitter.prototype.removeListener = function removeListener(event, fn, once)
 EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
   if (!this._events) return this;
 
-  if (event) delete this._events[event];
+  if (event) this._events[event] = null;
   else this._events = {};
 
   return this;
@@ -399,7 +353,6 @@ function Primus(url, options) {
  * Simple require wrapper to make browserify, node and require.js play nice.
  *
  * @param {String} name The module to require.
- * @returns {Object|Undefined} The module that we required.
  * @api private
  */
 Primus.require = function requires(name) {
@@ -458,12 +411,6 @@ try {
     }
 
     //
-    // We need to make sure that the URL is properly encoded because IE doesn't
-    // do this automatically.
-    //
-    data.href = encodeURI(decodeURI(data.href));
-
-    //
     // If we don't obtain a port number (e.g. when using zombie) then try
     // and guess at a value from the 'href' value.
     //
@@ -481,10 +428,10 @@ try {
     }
 
     //
-    // IE quirk: The `protocol` is parsed as ":" or "" when a protocol agnostic
-    // URL is used. In this case we extract the value from the `href` value.
+    // IE quirk: The `protocol` is parsed as ":" when a protocol agnostic URL
+    // is used. In this case we extract the value from the `href` value.
     //
-    if (!data.protocol || ':' === data.protocol) {
+    if (':' === data.protocol) {
       data.protocol = data.href.substr(0, data.href.indexOf(':') + 1);
     }
 
@@ -524,7 +471,7 @@ Primus.OPEN    = 3;   // The connection is open.
  * supported transports.
  *
  * @type {Boolean}
- * @private
+ * @api private
  */
 Primus.prototype.AVOID_WEBSOCKETS = false;
 
@@ -535,7 +482,7 @@ Primus.prototype.AVOID_WEBSOCKETS = false;
  * feature detection.
  *
  * @type {Boolean}
- * @private
+ * @api private
  */
 Primus.prototype.NETWORK_EVENTS = false;
 Primus.prototype.online = true;
@@ -564,7 +511,7 @@ Primus.prototype.ark = {};
  * Return the given plugin.
  *
  * @param {String} name The name of the plugin.
- * @returns {Object|undefined} The plugin or undefined.
+ * @returns {Mixed}
  * @api public
  */
 Primus.prototype.plugin = function plugin(name) {
@@ -585,7 +532,7 @@ Primus.prototype.plugin = function plugin(name) {
  * Checks if the given event is an emitted event by Primus.
  *
  * @param {String} evt The event name.
- * @returns {Boolean} Indication of the event is reserved for internal use.
+ * @returns {Boolean}
  * @api public
  */
 Primus.prototype.reserved = function reserved(evt) {
@@ -597,12 +544,11 @@ Primus.prototype.reserved = function reserved(evt) {
  * The actual events that are used by the client.
  *
  * @type {Object}
- * @public
+ * @api public
  */
 Primus.prototype.reserved.events = {
   readyStateChange: 1,
   reconnecting: 1,
-  reconnected: 1,
   reconnect: 1,
   offline: 1,
   timeout: 1,
@@ -618,7 +564,6 @@ Primus.prototype.reserved.events = {
  * Initialise the Primus and setup all parsers and internal listeners.
  *
  * @param {Object} options The original options object.
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.initialise = function initialise(options) {
@@ -637,9 +582,6 @@ Primus.prototype.initialise = function initialise(options) {
   });
 
   primus.on('incoming::open', function opened() {
-    var readyState = primus.readyState
-      , reconnect = primus.attempt;
-
     if (primus.attempt) primus.attempt = null;
 
     //
@@ -649,14 +591,7 @@ Primus.prototype.initialise = function initialise(options) {
     primus.writable = true;
     primus.readable = true;
 
-    //
-    // Make sure we are flagged as `online` as we've successfully opened the
-    // connection.
-    //
-    if (!primus.online) {
-      primus.online = true;
-      primus.emit('online');
-    }
+    var readyState = primus.readyState;
 
     primus.readyState = Primus.OPEN;
     if (readyState !== primus.readyState) {
@@ -666,20 +601,14 @@ Primus.prototype.initialise = function initialise(options) {
     primus.latency = +new Date() - start;
 
     primus.emit('open');
-    if (reconnect) primus.emit('reconnected');
-
     primus.clearTimeout('ping', 'pong').heartbeat();
 
     if (primus.buffer.length) {
-      var data = primus.buffer.slice()
-        , length = data.length
-        , i = 0;
-
-      primus.buffer.length = 0;
-
-      for (; i < length; i++) {
-        primus._write(data[i]);
+      for (var i = 0, length = primus.buffer.length; i < length; i++) {
+        primus._write(primus.buffer[i]);
       }
+
+      primus.buffer = [];
     }
   });
 
@@ -691,8 +620,7 @@ Primus.prototype.initialise = function initialise(options) {
   });
 
   primus.on('incoming::error', function error(e) {
-    var connect = primus.timers.connect
-      , err = e;
+    var connect = primus.timers.connect;
 
     //
     // We're still doing a reconnect attempt, it could be that we failed to
@@ -700,28 +628,12 @@ Primus.prototype.initialise = function initialise(options) {
     // always emit an `error` event instead of a `open` event.
     //
     if (primus.attempt) return primus.reconnect();
-
-    //
-    // When the error is not an Error instance we try to normalize it.
-    //
-    if ('string' === typeof e) {
-      err = new Error(e);
-    } else if (!(e instanceof Error) && 'object' === typeof e) {
-      //
-      // BrowserChannel and SockJS returns an object which contains some
-      // details of the error. In order to have a proper error we "copy" the
-      // details in an Error instance.
-      //
-      err = new Error(e.message || e.reason);
-      for (var key in e) {
-        if (e.hasOwnProperty(key)) err[key] = e[key];
-      }
-    }
-    if (primus.listeners('error').length) primus.emit('error', err);
+    if (primus.listeners('error').length) primus.emit('error', e);
 
     //
     // We received an error while connecting, this most likely the result of an
-    // unauthorized access to the server.
+    // unauthorized access to the server. But this something that is only
+    // triggered for Node based connections. Browsers trigger the error event.
     //
     if (connect) {
       if (~primus.options.strategy.indexOf('timeout')) primus.reconnect();
@@ -770,9 +682,7 @@ Primus.prototype.initialise = function initialise(options) {
     }
 
     if (primus.timers.connect) primus.end();
-    if (readyState !== Primus.OPEN) {
-      return primus.attempt ? primus.reconnect() : false;
-    }
+    if (readyState !== Primus.OPEN) return;
 
     this.writable = false;
     this.readable = false;
@@ -831,14 +741,6 @@ Primus.prototype.initialise = function initialise(options) {
     primus.online = false;
     primus.emit('offline');
     primus.end();
-
-    //
-    // It is certainly possible that we're in a reconnection loop and that the
-    // user goes offline. In this case we want to kill the existing attempt so
-    // when the user goes online, it will attempt to reconnect freshly again.
-    //
-    primus.clearTimeout('reconnect');
-    primus.attempt = null;
   }
 
   /**
@@ -966,7 +868,7 @@ Primus.prototype.transforms = function transforms(primus, connection, type, data
     //
     // We always emit 2 arguments for the data event, the first argument is the
     // parsed data and the second argument is the raw string that we received.
-    // This allows you, for example, to do some validation on the parsed data
+    // This allows you, for exampele, to do some validation on the parsed data
     // and then save the raw string in your database without the stringify
     // overhead.
     //
@@ -982,13 +884,12 @@ Primus.prototype.transforms = function transforms(primus, connection, type, data
  * Retrieve the current id from the server.
  *
  * @param {Function} fn Callback function.
- * @returns {Primus}
  * @api public
  */
 Primus.prototype.id = function id(fn) {
   if (this.socket && this.socket.id) return fn(this.socket.id);
 
-  this._write('primus::id::');
+  this.write('primus::id::');
   return this.once('incoming::id', fn);
 };
 
@@ -997,7 +898,6 @@ Primus.prototype.id = function id(fn) {
  * assume that we don't have any open connections. If you do call it when you
  * have a connection open, it could cause duplicate connections.
  *
- * @returns {Primus}
  * @api public
  */
 Primus.prototype.open = function open() {
@@ -1011,15 +911,14 @@ Primus.prototype.open = function open() {
   //
   if (!this.attempt && this.options.timeout) this.timeout();
 
-  this.emit('outgoing::open');
-  return this;
+  return this.emit('outgoing::open');
 };
 
 /**
  * Send a new message.
  *
  * @param {Mixed} data The data that needs to be written.
- * @returns {Boolean} Always returns true as we don't support back pressure.
+ * @returns {Boolean} Always returns true.
  * @api public
  */
 Primus.prototype.write = function write(data) {
@@ -1033,7 +932,7 @@ Primus.prototype.write = function write(data) {
  * The actual message writer.
  *
  * @param {Mixed} data The message that needs to be written.
- * @returns {Boolean} Successful write to the underlaying transport.
+ * @returns {Boolean}
  * @api private
  */
 Primus.prototype._write = function write(data) {
@@ -1074,7 +973,6 @@ Primus.prototype._write = function write(data) {
  * connected and our internet connection didn't drop. We cannot use server side
  * heartbeats for this unfortunately.
  *
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.heartbeat = function heartbeat() {
@@ -1106,21 +1004,17 @@ Primus.prototype.heartbeat = function heartbeat() {
    * @api private
    */
   function ping() {
-    var value = +new Date();
-
-    primus.clearTimeout('ping')._write('primus::ping::'+ value);
-    primus.emit('outgoing::ping', value);
+    primus.clearTimeout('ping').write('primus::ping::'+ (+new Date));
+    primus.emit('outgoing::ping');
     primus.timers.pong = setTimeout(pong, primus.options.pong);
   }
 
   primus.timers.ping = setTimeout(ping, primus.options.ping);
-  return this;
 };
 
 /**
  * Start a connection timeout.
  *
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.timeout = function timeout() {
@@ -1162,7 +1056,6 @@ Primus.prototype.timeout = function timeout() {
  * Properly clean up all `setTimeout` references.
  *
  * @param {String} ..args.. The names of the timeout's we need clear.
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.clearTimeout = function clear() {
@@ -1180,7 +1073,6 @@ Primus.prototype.clearTimeout = function clear() {
  *
  * @param {Function} callback Callback to be called after the timeout.
  * @param {Object} opts Options for configuring the timeout.
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.backoff = function backoff(callback, opts) {
@@ -1247,7 +1139,6 @@ Primus.prototype.backoff = function backoff(callback, opts) {
 /**
  * Start a new reconnect procedure.
  *
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.reconnect = function reconnect() {
@@ -1275,7 +1166,7 @@ Primus.prototype.reconnect = function reconnect() {
 };
 
 /**
- * Close the connection completely.
+ * Close the connection.
  *
  * @param {Mixed} data last packet of data.
  * @returns {Primus}
@@ -1297,7 +1188,7 @@ Primus.prototype.end = function end(data) {
     return this;
   }
 
-  if (data !== undefined) this.write(data);
+  if (data) this.write(data);
 
   this.writable = false;
   this.readable = false;
@@ -1355,7 +1246,6 @@ Primus.prototype.merge = function merge(target) {
 /**
  * Parse the connection string.
  *
- * @type {Function}
  * @param {String} url Connection URL.
  * @returns {Object} Parsed connection.
  * @api private
@@ -1487,7 +1377,6 @@ Primus.prototype.uri = function uri(options) {
  *
  * @param {String} event Name of the event that we should emit.
  * @param {Function} parser Argument parser.
- * @returns {Function} The wrapped function that will emit events when called.
  * @api public
  */
 Primus.prototype.emits = function emits(event, parser) {
@@ -1514,7 +1403,6 @@ Primus.prototype.emits = function emits(event, parser) {
  *
  * @param {String} type Incoming or outgoing
  * @param {Function} fn A new message transformer.
- * @returns {Primus}
  * @api public
  */
 Primus.prototype.transform = function transform(type, fn) {
@@ -1533,7 +1421,6 @@ Primus.prototype.transform = function transform(type, fn) {
  * If not, throw it, so we get a stack trace + proper error message.
  *
  * @param {Error} err The critical error.
- * @returns {Primus}
  * @api private
  */
 Primus.prototype.critical = function critical(err) {
@@ -1572,7 +1459,7 @@ Primus.prototype.client = function client() {
     , socket;
 
   //
-  // Select an available WebSocket factory.
+  // Selects an available WebSocket constructor.
   //
   var Factory = (function factory() {
     if ('undefined' !== typeof WebSocket) return WebSocket;
@@ -1584,9 +1471,7 @@ Primus.prototype.client = function client() {
     return undefined;
   })();
 
-  if (!Factory) return primus.critical(new Error(
-    'Missing required `ws` module. Please run `npm install --save ws`'
-  ));
+  if (!Factory) return primus.critical(new Error('Missing required `ws` module. Please run `npm install --save ws`'));
 
 
   //
@@ -1616,10 +1501,7 @@ Primus.prototype.client = function client() {
           primus.transport                              // options.
         );
       } else {
-        primus.socket = socket = new Factory(primus.uri({
-          protocol: prot,
-          query: qsa
-        }));
+        primus.socket = socket = new Factory(primus.uri({ protocol: prot, query: qsa }));
       }
     } catch (e) { return primus.emit('error', e); }
 
@@ -1646,9 +1528,11 @@ Primus.prototype.client = function client() {
   });
 
   //
-  // Attempt to reconnect the socket.
+  // Attempt to reconnect the socket. It assumes that the `outgoing::end` event is
+  // called if it failed to disconnect.
   //
   primus.on('outgoing::reconnect', function reconnect() {
+    primus.emit('outgoing::end');
     primus.emit('outgoing::open');
   });
 
@@ -1656,11 +1540,11 @@ Primus.prototype.client = function client() {
   // We need to close the socket.
   //
   primus.on('outgoing::end', function close() {
-    if (!socket) return;
-
-    socket.onerror = socket.onopen = socket.onclose = socket.onmessage = function () {};
-    socket.close();
-    socket = null;
+    if (socket) {
+      socket.onerror = socket.onopen = socket.onclose = socket.onmessage = function () {};
+      socket.close();
+      socket = null;
+    }
   });
 };
 Primus.prototype.authorization = false;
@@ -1683,7 +1567,7 @@ Primus.prototype.decoder = function decoder(data, fn) {
 
   fn(err, data);
 };
-Primus.prototype.version = "2.4.12";
+Primus.prototype.version = "2.3.0";
 
 //
 // Hack 1: \u2028 and \u2029 are allowed inside string in JSON. But JavaScript
@@ -1766,8 +1650,7 @@ if (
 
 
 (function(exports){ 
-var ActionheroClient = function(options, client){
-
+var actionheroClient = function (){
   var self = this;
 
   self.callbacks = {};
@@ -1781,18 +1664,18 @@ var ActionheroClient = function(options, client){
     self.options[i] = options[i];
   }
 
-  if(client){
+  if(client != null){
     self.client = client;
   }
 }
 
 if(typeof Primus === 'undefined'){
-  ActionheroClient.prototype = new EventEmitter();
+  actionheroClient.prototype = new EventEmitter();
 }else{
-  ActionheroClient.prototype = new Primus.EventEmitter();
+  actionheroClient.prototype = new Primus.EventEmitter();
 }
 
-ActionheroClient.prototype.defaults = function(){
+actionheroClient.prototype.defaults = function(){
   return { apiPath: '/api', websockets: true }
 }
 
@@ -1800,11 +1683,11 @@ ActionheroClient.prototype.defaults = function(){
 // CONNECTION //
 ////////////////
 
-ActionheroClient.prototype.connect = function(callback){
+actionheroClient.prototype.connect = function(callback){
   var self = this;
   
-  if(!self.client){
-    self.client = Primus.connect(self.options.url, self.options);
+  if(self.client == null){
+    self.client = Primus.connect(window.location.origin, self.options);
   }else{
     self.client.end();
     self.client.open();
@@ -1839,7 +1722,7 @@ ActionheroClient.prototype.connect = function(callback){
   });
 }
 
-ActionheroClient.prototype.configure = function(callback){
+actionheroClient.prototype.configure = function(callback){
   var self = this;
 
   self.messageCount = 0;
@@ -1859,7 +1742,7 @@ ActionheroClient.prototype.configure = function(callback){
 // MESSAGING //
 ///////////////
 
-ActionheroClient.prototype.send = function(args, callback){
+actionheroClient.prototype.send = function(args, callback){
   // primus will buffer messages when not connected
   var self = this;
   self.messageCount++;
@@ -1869,7 +1752,7 @@ ActionheroClient.prototype.send = function(args, callback){
   self.client.write(args);
 }
 
-ActionheroClient.prototype.handleMessage = function(message){
+actionheroClient.prototype.handleMessage = function(message){
   var self = this;
   self.emit('message', message);
   if(message.context === 'response'){
@@ -1881,7 +1764,7 @@ ActionheroClient.prototype.handleMessage = function(message){
     self.emit('say', message);
   } else if(message.context === 'alert'){
     self.emit('alert', message);
-  } else if(message.welcome && message.context === 'api'){
+  } else if(message.welcome != null && message.context == 'api'){
     self.welcomeMessage = message.welcome;
     self.emit('welcome', message);
   } else if(message.context === 'api'){
@@ -1893,12 +1776,12 @@ ActionheroClient.prototype.handleMessage = function(message){
 // ACTIONS //
 /////////////
 
-ActionheroClient.prototype.action = function(action, params, callback){
-  if(!callback && typeof params === 'function'){
+actionheroClient.prototype.action = function(action, params, callback){
+  if(callback == null && typeof params == 'function'){
     callback = params;
     params = null;
   }
-  if(!params){ params = {}; }
+  if(params == null){ params = {} }
   params.action = action;
   
   if(this.state !== 'connected'){
@@ -1908,11 +1791,11 @@ ActionheroClient.prototype.action = function(action, params, callback){
   }
 }
 
-ActionheroClient.prototype.actionWeb = function(params, callback){
+actionheroClient.prototype.actionWeb = function(params, callback){
   var xmlhttp = new XMLHttpRequest();
   xmlhttp.onreadystatechange = function(){
-    if(xmlhttp.readyState === 4){
-      if(xmlhttp.status === 200){
+    if(xmlhttp.readyState == 4){
+      if(xmlhttp.status == 200){
         var response = JSON.parse(xmlhttp.responseText);
         callback(null, response);
       }else{
@@ -1920,20 +1803,20 @@ ActionheroClient.prototype.actionWeb = function(params, callback){
       }
     }
   }
-  var qs = '?';
+  var qs = "?"
   for(var i in params){
-    qs += i + '=' + params[i] + '&';
+    qs += i + "=" + params[i] + "&";
   }
   var method = 'GET';
-  if(params.httpMethod){
+  if(params.httpMethod != null){
     method = params.httpMethod;
   }
-  var url = this.options.url + this.options.apiPath + qs;
+  var url = window.location.origin + this.options.apiPath + qs;
   xmlhttp.open(method, url, true);
   xmlhttp.send();
 }
 
-ActionheroClient.prototype.actionWebSocket = function(params, callback){
+actionheroClient.prototype.actionWebSocket = function(params, callback){
   this.send({event: 'action',params: params}, callback);
 }
 
@@ -1941,42 +1824,39 @@ ActionheroClient.prototype.actionWebSocket = function(params, callback){
 // COMMANDS //
 //////////////
 
-ActionheroClient.prototype.say = function(room, message, callback){
+actionheroClient.prototype.say = function(room, message, callback){
   this.send({event: 'say', room: room, message: message}, callback);
 }
 
-ActionheroClient.prototype.file = function(file, callback){
+actionheroClient.prototype.file = function(file, callback){
   this.send({event: 'file', file: file}, callback);
 }
 
-ActionheroClient.prototype.detailsView = function(callback){
+actionheroClient.prototype.detailsView = function(callback){
   this.send({event: 'detailsView'}, callback);
 }
 
-ActionheroClient.prototype.roomView = function(room, callback){
+actionheroClient.prototype.roomView = function(room, callback){
   this.send({event: 'roomView', room: room}, callback);
 }
 
-ActionheroClient.prototype.roomAdd = function(room, callback){
+actionheroClient.prototype.roomAdd = function(room, callback){
   this.rooms.push(room); // only a list of *intended* rooms to join; might fail
   this.send({event: 'roomAdd', room: room}, callback);
 }
 
-ActionheroClient.prototype.roomLeave = function(room, callback){
+actionheroClient.prototype.roomLeave = function(room, callback){
   this.send({event: 'roomLeave', room: room}, callback);
 }
 
-ActionheroClient.prototype.documentation = function(callback){
+actionheroClient.prototype.documentation = function(callback){
   this.send({event: 'documentation'}, callback);
 }
 
-ActionheroClient.prototype.disconnect = function(){
+actionheroClient.prototype.disconnect = function(){
   this.state = 'disconnected';
   this.client.end();
   this.emit('disconnected');
 }
-
-// depricated lowercase name
-var actionheroClient = ActionheroClient;
 exports.actionheroClient = actionheroClient; 
 })(typeof exports === 'undefined' ? window : exports);

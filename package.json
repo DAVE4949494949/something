@@ -1,7 +1,7 @@
 {
   "author": "Pioniro <pioniro@yandex.ru>",
   "name": "parser",
-  "description": "site parser for",
+    "description": "site parser for botalize.com",
   "version": "0.0.1",
   "engines": {
     "node": ">=0.10.0"

@@ -13,7 +13,7 @@ action.outputExample = {
   status: 'OK',
   uptime: 1234,
   stats: {}
-};
+}
 
 /////////////////////////////////////////////////////////////////////
 // functional
