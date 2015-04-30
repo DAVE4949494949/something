@@ -16,7 +16,6 @@ var websocket = function(api, options, next) {
     canChat: true,
     logConnections: true,
     logExits: true,
-//        sendWelcomeMessage:    true,
     verbs: [
       'quit',
       'action',

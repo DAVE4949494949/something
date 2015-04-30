@@ -10,7 +10,7 @@ exports.default = {
       logger.transports.push(function(api, winston){
         return new (winston.transports.Console)({
           colorize: true,
-          level: 'debug',
+          level: 'notice',
           timestamp: api.utils.sqlDateTime
         });
       });
