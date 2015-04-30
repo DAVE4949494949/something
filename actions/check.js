@@ -249,6 +249,7 @@ action.run = function (api, connection, next) {
                  * Постер сайта
                  */
                 function (done) {
+                  registerParser('poster');
                   data.screen_url = 'http://api.s-shot.ru/1024x1024/PNG/1024/KEYNJ7EWBQ57EJV5QE7/Z100/T0/D0/JS1/FS1/?' + url;
                   var imagePath = dataShotDir + '/' + url + '.png';
                   request(data.screen_url)
@@ -257,7 +258,7 @@ action.run = function (api, connection, next) {
                       gm(imagePath)
                         .draw(['image Over 307,307 410,410 ' + __dirname + '/../images/watermark.png'])
                         .write(imagePath, function(e) {
-                          successPart();
+                          successPart(null, 'poster');
                           done();
                         });
                     });
