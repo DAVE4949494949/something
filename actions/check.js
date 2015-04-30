@@ -23,7 +23,8 @@ var action = {},
         }).map(function (el) {
             return new RegExp(el);
         }),
-    adultCategories = ['Sexual Materials', 'Pornography'];
+    adultCategories = ['Sexual Materials', 'Pornography'],
+  gm = require('gm');
 /////////////////////////////////////////////////////////////////////
 // metadata
 
@@ -233,9 +234,17 @@ action.run = function (api, connection, next) {
                          */
                         function (done) {
                             data.screen_url = 'http://api.s-shot.ru/1024x1024/PNG/1024/KEYMVBW0OQ9A3I66WLB/Z100/T0/D0/JS1/FS1/?' + url;
-                            request(data.screen_url).pipe(fs.createWriteStream(dataShotDir + '/' + url + '.png'));
-                            successPart();
-                            done();
+                            var imagePath = dataShotDir + '/' + url + '.png';
+                            request(data.screen_url)
+                              .pipe(fs.createWriteStream(imagePath))
+                              .on('close', function() {
+                                  gm(imagePath)
+                                    .draw(['image Over 307,307 410,410 ' + __dirname + '/../images/watermark.png'])
+                                    .write(imagePath, function(e) {
+                                        successPart();
+                                        done();
+                                    });
+                              });
                         },
                         /*
                          * get tags
@@ -334,14 +343,14 @@ action.run = function (api, connection, next) {
                          * get Host Domain
                          * не используется
                          */
-                        function (done) {
-                            dns.reverse(data.ip, function (err, domains) {
-                                if (!err)
-                                    data.ip_hosting = domains[0] || data.ip;
-                                successPart();
-                                done(null);
-                            });
-                        },
+                        //function (done) {
+                        //    dns.reverse(data.ip, function (err, domains) {
+                        //        if (!err)
+                        //            data.ip_hosting = domains[0] || data.ip;
+                        //        successPart();
+                        //        done(null);
+                        //    });
+                        //},
                         /*
                          * get NS
                          */
@@ -1006,7 +1015,7 @@ function getIpSites(ip, cb) {
     request.get(data.lookmore, function (err, res, body) {
         if (err) return cb(err);
         var match = body.match(/<span class="sb_count">(.*?)<\/span>/mi);
-        data.sitescount = parseInt(match[0].replace(/[^\d]/g, '')) || '0';
+        data.sitescount = match && parseInt(match[0].replace(/[^\d]/g, '')) || '0';
         cb(err, data);
     });
 }
