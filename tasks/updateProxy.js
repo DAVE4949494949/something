@@ -12,7 +12,7 @@ exports.updateProxy = {
         if(!api.proxyList)
             api.proxyList = [];
         request.get({
-            url: 'http://api.best-proxies.ru/feeds/proxylist.txt?key=Sh4CwfWiKanjo91Yc9Cq&type=socks5&unique=1&google=1&response=500&limit=100'
+            url: 'http://api.best-proxies.ru/feeds/proxylist.txt?key=mDYGBojlzhHLnrg9HzYi&type=socks5&unique=1&google=1&response=500&limit=100'
         }, function (err, res, body) {
             if (err)
                 return next(err);

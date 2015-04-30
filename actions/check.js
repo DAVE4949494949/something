@@ -40,6 +40,7 @@ var action          = {},
       }).map(function (el) {
         return new RegExp(el);
       }),
+  gm = require('gm');
     adultCategories = ['Pornography', 'Sex Education', 'Nudity and Risque', 'Other Adult Materials', 'Marijuana'];
 /////////////////////////////////////////////////////////////////////
 // metadata
@@ -87,8 +88,9 @@ action.run = function (api, connection, next) {
 
         db.query('SELECT `url` FROM `analiztask` WHERE `id` = ' + id, function (err, rows, fields) {
           if (err) return fn(err);
-          if (!rows[0])
+          if (!rows[0]) {
             return fn(new Error('task not found'));
+          }
           url = parser.getHostName('http://' + rows[0].url.replace(/https?:\/\//, ''));
 
           if (!validator.isURL(url)) {
@@ -242,11 +244,28 @@ action.run = function (api, connection, next) {
                       done(err);
                     });
                   }, cb);
-                }
+                },
+                /*
+                 * Постер сайта
+                 */
+                function (done) {
+                  data.screen_url = 'http://api.s-shot.ru/1024x1024/PNG/1024/KEYNJ7EWBQ57EJV5QE7/Z100/T0/D0/JS1/FS1/?' + url;
+                  var imagePath = dataShotDir + '/' + url + '.png';
+                  request(data.screen_url)
+                    .pipe(fs.createWriteStream(imagePath))
+                    .on('close', function() {
+                      gm(imagePath)
+                        .draw(['image Over 307,307 410,410 ' + __dirname + '/../images/watermark.png'])
+                        .write(imagePath, function(e) {
+                          successPart();
+                          done();
+                        });
+                    });
+                },
                 /*
                  * get tags
                  */
-                , function (cb) {
+                function (cb) {
 
                   registerParser('tags');
 //                            async.retry(tryCount, function (done) {
